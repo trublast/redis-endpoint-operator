@@ -9,9 +9,11 @@ Usage:
 
 `/redis-endpoint-operator -sentinel IP:PORT -master NAME -service KUBE-SERVICE` 
 
+Docker images available here: https://hub.docker.com/r/trublast/redis-endpoint-operator/tags
+
 Usage example with [spotahome/redis-operator](https://github.com/spotahome/redis-operator) `v1.2.4`
 
-```
+```yaml
 ---
 apiVersion: databases.spotahome.com/v1
 kind: RedisFailover
