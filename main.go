@@ -24,6 +24,7 @@ var (
 	masterName   = flag.String("master", "mymaster", "name of the master redis node")
 	serviceName  = flag.String("service", "", "name of serive endpoint to configure")
 	logLevel     = flag.String("loglevel", "info", "Log level")
+	sentinelTls  = flag.Bool("tls", false, "Sentinel use tls (default false)")
 )
 
 func main() {
@@ -118,19 +119,42 @@ func changeEndpoint(currentMasterAddr *net.TCPAddr) error {
 }
 
 func getMasterAddr(sentinelAddress *net.TCPAddr, masterName string) (*net.TCPAddr, error) {
-	conn, err := net.DialTCP("tcp", nil, sentinelAddress)
-	if err != nil {
-		return nil, err
-	}
 
-	defer conn.Close()
-
-	conn.Write([]byte(fmt.Sprintf("sentinel get-master-addr-by-name %s\n", masterName)))
+	var conn *net.TCPConn
+	var connTls *tls.Conn
+	var err error
 
 	b := make([]byte, 256)
-	_, err = conn.Read(b)
-	if err != nil {
-		log.Fatal(err)
+
+	if *sentinelTls {
+		conf := &tls.Config{
+			InsecureSkipVerify: true,
+		}
+		log.Info(sentinelAddress.IP.String() + ":" + fmt.Sprint(sentinelAddress.Port))
+		connTls, err = tls.Dial("tcp", sentinelAddress.IP.String()+":"+fmt.Sprint(sentinelAddress.Port), conf)
+		if err != nil {
+			return nil, err
+		}
+		defer connTls.Close()
+		connTls.Write([]byte(fmt.Sprintf("sentinel get-master-addr-by-name %s\n", masterName)))
+
+		_, err = connTls.Read(b)
+		if err != nil {
+			log.Error(err)
+		}
+	} else {
+		conn, err = net.DialTCP("tcp", nil, sentinelAddress)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+		conn.Write([]byte(fmt.Sprintf("sentinel get-master-addr-by-name %s\n", masterName)))
+
+		_, err = conn.Read(b)
+		if err != nil {
+			log.Error(err)
+		}
+
 	}
 
 	parts := strings.Split(string(b), "\r\n")
