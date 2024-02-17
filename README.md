@@ -28,8 +28,6 @@ spec:
       image: trublast/redis-endpoint-operator
       command:
         - /redis-endpoint-operator
-        - -sentinel
-        - rfs-redis:26379
         - -service
         - myproject-redis
   redis:
